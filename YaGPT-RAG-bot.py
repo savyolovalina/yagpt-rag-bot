@@ -9,7 +9,7 @@ from yandex_chain import YandexLLM
 
 
 from langchain.prompts import PromptTemplate
-from langchain.document_loaders import DirectoryLoader, PyPDFLoader
+from langchain.document_loaders import PyPDFDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import OpenSearchVectorSearch
 
@@ -17,20 +17,15 @@ from langchain.chains import RetrievalQA
 
 from streamlit_chat import message
 
-# from dotenv import load_dotenv
+from dotenv import load_dotenv
 
-ROOT_DIRECTORY = "."
-MDB_OS_CA = f"{ROOT_DIRECTORY}/.opensearch/root.crt"
 
 # использовать системные переменные из облака streamlit (secrets)
-# yagpt_api_key = st.secrets["yagpt_api_key"]
-# yagpt_folder_id = st.secrets["yagpt_folder_id"]
-# yagpt_api_id = st.secrets["yagpt_api_id"]
-# mdb_os_pwd = st.secrets["mdb_os_pwd"]
-# mdb_os_hosts = st.secrets["mdb_os_hosts"].split(",")
-# mdb_os_index_name = st.secrets["mdb_os_index_name"]
-
-# MDB_OS_CA = st.secrets["mdb_os_ca"] # 
+yagpt_api_key = st.secrets["yagpt_api_key"]
+yagpt_folder_id = st.secrets["yagpt_folder_id"]
+mdb_os_pwd = st.secrets["mdb_os_pwd"]
+mdb_os_hosts = st.secrets["mdb_os_hosts"].split(",")
+mdb_os_index_name = st.secrets["mdb_os_index_name"]
 
 def ingest_docs(temp_dir: str = tempfile.gettempdir()):
     """
@@ -38,13 +33,13 @@ def ingest_docs(temp_dir: str = tempfile.gettempdir()):
     """
     try:
         # выдать ошибку, если каких-то переменных не хватает
-        if not yagpt_api_key or not yagpt_folder_id or not yagpt_api_id or not mdb_os_pwd or not mdb_os_hosts or not mdb_os_index_name:
+        if not yagpt_api_key or not yagpt_folder_id or not mdb_os_pwd or not mdb_os_hosts or not mdb_os_index_name:
             raise ValueError(
-                "Пожалуйста укажите необходимый набор переменных окружения")
+                "Пожалуйста, укажите необходимый набор переменных окружения")
 
         # загрузить PDF файлы из временной директории
-        loader = DirectoryLoader(
-            temp_dir, glob="**/*.pdf", loader_cls=PyPDFLoader, recursive=True
+        loader = PyPDFDirectoryLoader(
+            temp_dir
         )
         documents = loader.load()
 
@@ -59,11 +54,7 @@ def ingest_docs(temp_dir: str = tempfile.gettempdir()):
             mdb_os_hosts,
             http_auth=('admin', mdb_os_pwd),
             use_ssl=True,
-            verify_certs=False,
-            ca_certs=MDB_OS_CA)
-        # для включения проверки MDB сертификата используйте verify_certs=True, также надо будет загрузить сертификат используя инструкцию по ссылке 
-        # https://cloud.yandex.ru/docs/managed-opensearch/operations/connect 
-        # и положить его в папку .opensearch/root.crt
+            verify_certs=False)
         
         # инициируем процедуру превращения блоков текста в Embeddings через YaGPT Embeddings API, используя API ключ доступа
         embeddings = YandexEmbeddings(folder_id=yagpt_folder_id, api_key=yagpt_api_key)
@@ -76,7 +67,6 @@ def ingest_docs(temp_dir: str = tempfile.gettempdir()):
             http_auth=("admin", mdb_os_pwd),
             use_ssl = True,
             verify_certs = False,
-            ca_certs = MDB_OS_CA,
             engine = 'lucene',
             index_name = mdb_os_index_name,
             bulk_size=1000000
@@ -90,14 +80,14 @@ def ingest_docs(temp_dir: str = tempfile.gettempdir()):
 # это основная функция, которая запускает приложение streamlit
 def main():
     # Загрузка логотипа компании
-    logo_image = './images/logo.png'  # Путь к изображению логотипа
+    logo_image = './images/bot.png'  # Путь к изображению логотипа
 
     # # Отображение логотипа в основной части приложения
     from PIL import Image
     # Загрузка логотипа
     logo = Image.open(logo_image)
     # Изменение размера логотипа
-    resized_logo = logo.resize((100, 100))
+    resized_logo = logo.resize((368, 276))
     # Отображаем лого измененного небольшого размера
     st.image(resized_logo)
     # Указываем название и заголовок Streamlit приложения
@@ -107,7 +97,7 @@ def main():
     # вводить все credentials в графическом интерфейсе слева
     # Sidebar contents
     with st.sidebar:
-        st.title('\U0001F917\U0001F4ACИИ-помощник')
+        st.title('\U0001F917\U0001F4ACAI-менеджер базы знаний')
         st.markdown('''
         ## О программе
         Данный YaGPT-помощник реализует [Retrieval-Augmented Generation (RAG)](https://github.com/yandex-cloud-examples/yc-yandexgpt-qa-bot-for-docs/blob/main/README.md) подход
@@ -121,20 +111,18 @@ def main():
 
     global  yagpt_folder_id, yagpt_api_id, yagpt_api_key, mdb_os_ca, mdb_os_pwd, mdb_os_hosts, mdb_os_index_name    
     yagpt_folder_id = st.sidebar.text_input("YAGPT_FOLDER_ID", type='password')
-    yagpt_api_id = st.sidebar.text_input("YAGPT_API_ID", type='password')
     yagpt_api_key = st.sidebar.text_input("YAGPT_API_KEY", type='password')
-    mdb_os_ca = MDB_OS_CA
     mdb_os_pwd = st.sidebar.text_input("MDB_OpenSearch_PASSWORD", type='password')
     mdb_os_hosts = st.sidebar.text_input("MDB_OpenSearch_HOSTS через 'запятую' ", type='password').split(",")
     mdb_os_index_name = st.sidebar.text_input("MDB_OpenSearch_INDEX_NAME")
 
     # Параметры chunk_size и chunk_overlap
     global chunk_size, chunk_overlap
-    chunk_size = st.sidebar.slider("Выберите размер текстового 'окна' разметки документов в символах", 0, 2000, 1000)
+    chunk_size = st.sidebar.slider("Выберите размер текстового 'окна' разметки документов в символах", 0, 2000, 500)
     chunk_overlap = st.sidebar.slider("Выберите размер блока перекрытия в символах", 0, 400, 100)
 
     # Выводим предупреждение, если пользователь не указал свои учетные данные
-    if not yagpt_api_key or not yagpt_folder_id or not yagpt_api_id or not mdb_os_pwd or not mdb_os_hosts or not mdb_os_index_name:
+    if not yagpt_api_key or not yagpt_folder_id or not mdb_os_pwd or not mdb_os_hosts or not mdb_os_index_name:
         st.warning(
             "Пожалуйста, задайте свои учетные данные (в secrets/.env или в раскрывающейся панели слева) для запуска этого приложения.")
 
@@ -177,8 +165,7 @@ def main():
             mdb_os_hosts,
             http_auth=('admin', mdb_os_pwd),
             use_ssl=True,
-            verify_certs=False,
-            ca_certs=MDB_OS_CA
+            verify_certs=False
             )
 
         # инициализировать модели YandexEmbeddings и YandexGPT
@@ -195,14 +182,16 @@ def main():
             http_auth=("admin", mdb_os_pwd),
             use_ssl = True,
             verify_certs = False,
-            ca_certs = MDB_OS_CA,
             engine = 'lucene'
         )  
 
-        template = """Представь, что ты полезный ИИ-помощник. Твоя задача отвечать на вопросы на русском языке в рамках предоставленного ниже текста.
+        template = """Ты - полезный ИИ-помощник. Твоя задача отвечать на вопросы на русском языке в рамках предоставленного ниже текста.
         Отвечай точно в рамках предоставленного текста, даже если тебя просят придумать.
-        Отвечай вежливо в официальном стиле. Eсли знаешь больше, чем указано в тексте, а внутри текста ответа нет, отвечай 
-        "Я могу давать ответы только по тематике загруженных документов. Мне не удалось найти в документах ответ на ваш вопрос."
+        Для начала определи тему вопроса и тему текста, если темы не совпадают - отвечай "Я отвечаю только по теме предоставленного контекста."
+        После проверки совпадения тем действуй по следующему алгоритму:
+        1) Отвечай точно по информации из предоставленного текста, даже если тебя просят придумать.
+        2) Отвечай вежливо в официальном стиле.
+        3) Eсли знаешь больше, чем указано в контексте, а внутри контекста ответа нет, отвечай "Я не знаю".
         {context}
         Вопрос: {question}
         Твой ответ:
@@ -210,7 +199,7 @@ def main():
         QA_CHAIN_PROMPT = PromptTemplate.from_template(template)
         qa = RetrievalQA.from_chain_type(
             llm,
-            retriever=vectorstore.as_retriever(search_kwargs={'k': 5}),
+            retriever=vectorstore.as_retriever(search_kwargs={'k': 4}),
             return_source_documents=True,
             chain_type_kwargs={"prompt": QA_CHAIN_PROMPT}
         )

@@ -1,6 +1,7 @@
-yandex-chain
 streamlit
 streamlit-chat
-langchain
+langchain==0.0.348
+yandex-chain
 opensearch-py
 pypdf
+jq
