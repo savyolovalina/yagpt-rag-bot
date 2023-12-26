@@ -5,3 +5,4 @@ yandex-chain
 opensearch-py
 pypdf
 jq
+python-dotenv
