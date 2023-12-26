@@ -80,7 +80,7 @@ def ingest_docs(temp_dir: str = tempfile.gettempdir()):
 # это основная функция, которая запускает приложение streamlit
 def main():
     # Загрузка логотипа компании
-    logo_image = './images/bot.png'  # Путь к изображению логотипа
+    logo_image = './images/bot.jpeg'  # Путь к изображению логотипа
 
     # # Отображение логотипа в основной части приложения
     from PIL import Image
@@ -109,12 +109,18 @@ def main():
         - [LangChain](https://python.langchain.com/)
         ''')
 
-    global  yagpt_folder_id, yagpt_api_id, yagpt_api_key, mdb_os_ca, mdb_os_pwd, mdb_os_hosts, mdb_os_index_name    
-    yagpt_folder_id = st.sidebar.text_input("YAGPT_FOLDER_ID", type='password')
-    yagpt_api_key = st.sidebar.text_input("YAGPT_API_KEY", type='password')
-    mdb_os_pwd = st.sidebar.text_input("MDB_OpenSearch_PASSWORD", type='password')
-    mdb_os_hosts = st.sidebar.text_input("MDB_OpenSearch_HOSTS через 'запятую' ", type='password').split(",")
-    mdb_os_index_name = st.sidebar.text_input("MDB_OpenSearch_INDEX_NAME")
+    global  yagpt_folder_id, yagpt_api_key, mdb_os_ca, mdb_os_pwd, mdb_os_hosts, mdb_os_index_name    
+    # yagpt_folder_id = st.sidebar.text_input("YAGPT_FOLDER_ID", type='password')
+    # yagpt_api_key = st.sidebar.text_input("YAGPT_API_KEY", type='password')
+    # mdb_os_pwd = st.sidebar.text_input("MDB_OpenSearch_PASSWORD", type='password')
+    # mdb_os_hosts = st.sidebar.text_input("MDB_OpenSearch_HOSTS через 'запятую' ", type='password').split(",")
+    # mdb_os_index_name = st.sidebar.text_input("MDB_OpenSearch_INDEX_NAME")
+    yagpt_api_key = st.secrets["yagpt_api_key"]
+    yagpt_folder_id = st.secrets["yagpt_folder_id"]
+    mdb_os_pwd = st.secrets["mdb_os_pwd"]
+    mdb_os_hosts = st.secrets["mdb_os_hosts"].split(",")
+    mdb_os_index_name = st.secrets["mdb_os_index_name"]
+
 
     # Параметры chunk_size и chunk_overlap
     global chunk_size, chunk_overlap
